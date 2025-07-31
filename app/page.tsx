@@ -3,19 +3,63 @@
 import { useUser } from "@clerk/nextjs";
 import { useRouter } from "next/navigation";
 import { Search, MoreVertical, Video, Phone, Mic } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { UUID } from "crypto";
+import Image from "next/image";
+
+type users = {
+  username: string;
+  email: string;
+  profile: string;
+};
+
+type Chats = {
+  id: UUID;
+  email:string;
+  username:string;
+  profile:string;
+  createdAt : string;
+}
 
 export default function Home() {
   const [selected, setSelected] = useState<string | null>(null);
-  const { isSignedIn } = useUser();
+  const [Chats,setChats] = useState<Chats[]>([])
+  const { isSignedIn, user } = useUser();
   const router = useRouter();
+  const username = user?.username;
+  const email = user?.emailAddresses[0].emailAddress;
+  const profile = user?.imageUrl;
 
-  if (!isSignedIn) {
-    router.push("/sign-in");
-    return;
+
+  const fetchData = async (user: users) => {
+    const res = await fetch("/api/user", {
+      method: "Post",
+      body: JSON.stringify(user),
+    });
+    const data = await res.json();
+    console.log(data);
+  };
+  const fetchChats = async()=>{
+    const res = await fetch("/api/user",{
+      method:"GET"
+    })
+    const data = await res.json()
+    console.log(data)
+    setChats(data.result)
   }
 
-  
+  useEffect(() => {
+    if (!isSignedIn) {
+      router.push("/sign-in");
+      return;
+    }
+    if (!username || !email || !profile) {
+      return;
+    }
+    fetchData({ username, email, profile });
+    fetchChats()
+  }, [isSignedIn, router, username, email, profile]);
+
   return (
     <div className="flex h-screen bg-gray-100">
       {/* Sidebar - Chat List */}
@@ -40,32 +84,16 @@ export default function Home() {
 
         {/* Chat list */}
         <div className="overflow-y-auto flex-1 no-scrollbar">
-          {[
-            "Ayush",
-            "Mayank",
-            "Code Vinu",
-            "Papa",
-            "Ashima",
-            "BSC CS",
-            "Geek Room Team",
-            "Ayush",
-            "Mayank",
-            "Code Vinu",
-            "Papa",
-            "Ashima",
-            "BSC CS",
-            "Geek Room Team",
-          ].map((user, idx) => (
+          {Chats.map((user) => (
             <div
-              key={idx}
+              key={user.id}
               className="flex items-center px-4 py-3 hover:bg-[#333] cursor-pointer"
-              onClick={() => setSelected(selected === user ? null : user)}
+              onClick={() => setSelected(selected === user.id ? null : user.id)}
             >
-              <div className="w-10 h-10 rounded-full bg-gray-500 flex items-center justify-center text-white font-semibold">
-                {user.charAt(0)}
-              </div>
+              <Image src={user.profile}alt={`${user.username}`} width={40} height={40} className="w-10 h-10 rounded-full bg-gray-500 flex items-center justify-center text-white font-semibold" />
+    
               <div className="ml-3">
-                <p className="font-medium text-white">{user}</p>
+                <p className="font-medium text-white">{user.username}</p>
                 <p className="text-xs text-gray-400 truncate">
                   last message preview...
                 </p>
