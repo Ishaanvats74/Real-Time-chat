@@ -25,6 +25,7 @@ export default function Home() {
   const [selected, setSelected] = useState<string | null>(null);
   const [Chats,setChats] = useState<Chats[]>([])
   const { isSignedIn, user } = useUser();
+  const [isGroup,setisGroup] = useState<boolean>(false)
   const router = useRouter();
   const username = user?.username;
   const email = user?.emailAddresses[0].emailAddress;
@@ -60,6 +61,17 @@ export default function Home() {
     fetchChats()
   }, [isSignedIn, router, username, email, profile]);
 
+  const handleMessage = async(user:Chats)=>{
+    setSelected(selected === user.id ? null : user.id)
+    const res = await fetch("/api/conversation",{
+      method:"POST",
+      body:JSON.stringify({
+        type :isGroup,
+        
+      })
+    })
+  }
+
   return (
     <div className="flex h-screen bg-gray-100">
       {/* Sidebar - Chat List */}
@@ -88,7 +100,7 @@ export default function Home() {
             <div
               key={user.id}
               className="flex items-center px-4 py-3 hover:bg-[#333] cursor-pointer"
-              onClick={() => setSelected(selected === user.id ? null : user.id)}
+              onClick={() => handleMessage(user)}
             >
               <Image src={user.profile}alt={`${user.username}`} width={40} height={40} className="w-10 h-10 rounded-full bg-gray-500 flex items-center justify-center text-white font-semibold" />
     
@@ -128,11 +140,6 @@ export default function Home() {
               </div>
               <div className="self-start max-w-[60%] bg-[#2d2d2d] text-white rounded-xl px-4 py-2">
                 <p>wrna mujhe admin banade main chod deta hoon</p>
-                {/* <Image
-                src="/crying-cat-meme.jpg"
-                alt="meme"
-                className="mt-2 rounded-lg"
-                /> */}
               </div>
             </div>
           </div>
