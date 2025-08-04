@@ -1,162 +1,195 @@
 "use client";
 
 import { useUser } from "@clerk/nextjs";
-import { useRouter } from "next/navigation";
-import { Search, MoreVertical, Video, Phone, Mic } from "lucide-react";
-import { useEffect, useState } from "react";
-import { UUID } from "crypto";
-import Image from "next/image";
+import { redirect } from "next/navigation";
+import React, { useEffect, useState } from "react";
 
-type users = {
-  username: string;
-  email: string;
-  profile: string;
+
+type messages = {
+  id: string;
+  conversation_id: string;
+  sender_id: string;
+  text: string;
+  createdAt: string;
 };
 
-type Chats = {
-  id: UUID;
-  email:string;
-  username:string;
-  profile:string;
-  createdAt : string;
-}
+type conversation = {
+  id: string;
+  user1_id: string;
+  user2_id: string;
+  createdAt: string;
+};
 
 export default function Home() {
-  const [selected, setSelected] = useState<string | null>(null);
-  const [Chats,setChats] = useState<Chats[]>([])
   const { isSignedIn, user } = useUser();
-  const [isGroup,setisGroup] = useState<boolean>(false)
-  const router = useRouter();
-  const username = user?.username;
+  const [conversation, setConversation] = useState<conversation[]>([]);
+  const [inputText, setInputText] = useState("");
+  const [messages, setMessages] = useState<messages[]>([]);
+  const [selectedConversationId, setSelectedConversationId] = useState<
+    string | null
+  >(null);
+
+  const UserName = user?.username;
   const email = user?.emailAddresses[0].emailAddress;
-  const profile = user?.imageUrl;
+  const profileUrl = user?.imageUrl;
 
-
-  const fetchData = async (user: users) => {
-    const res = await fetch("/api/user", {
-      method: "Post",
-      body: JSON.stringify(user),
+  const fetchUser = async () => {
+    const res = await fetch("/api/users", {
+      method: "POST",
+      body: JSON.stringify({
+        username: UserName,
+        email: email,
+        profile: profileUrl,
+      }),
     });
     const data = await res.json();
     console.log(data);
   };
-  const fetchChats = async()=>{
-    const res = await fetch("/api/user",{
-      method:"GET"
-    })
-    const data = await res.json()
-    console.log(data)
-    setChats(data.result)
-  }
 
+  const fetchConversations = async () => {
+    const res = await fetch("/api/conversations", {
+      method: "GET",
+    });
+    const data = await res.json();
+    console.log(data);
+    setConversation(data);
+  };
+
+  // const fetchConversationsUpdate = async () => {
+  //   const res = await fetch("/app/api/conversations",{
+  //     method:"POST",
+  //     body:JSON.stringify({
+  //       user1_id:"user123",
+  //       user2_id:"user345",
+  //     })
+
+  //   })
+  //   const data = await res.json()
+  //   setConversation(data)
+  // }
+
+  const fetchMessages = async (conversationId: unknown) => {
+    const res = await fetch(`/api/messages?conversation_id=${conversationId}`, {
+      method: "GET",
+    });
+    const data = await res.json();
+    console.log(data);
+    setMessages(data);
+  };
+
+  const fetchMessagesInput = async () => {
+    const res = await fetch("/api/messages", {
+      method: "POST",
+      body: JSON.stringify({
+        conversation_id: selectedConversationId,
+        sender_id: user?.id,
+        text: inputText,
+      }),
+    });
+    const data = await res.json();
+    console.log(data);
+    setInputText("");
+    await fetchMessages(selectedConversationId);
+  };
+  const handleConversationClick = (id: string) => {
+    setSelectedConversationId(id);
+    fetchMessages(id);
+  };
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setInputText(e.target.value);
+  };
   useEffect(() => {
     if (!isSignedIn) {
-      router.push("/sign-in");
-      return;
+      redirect("/sign-in");
+    } else {
+      fetchUser();
+      fetchConversations();
     }
-    if (!username || !email || !profile) {
-      return;
-    }
-    fetchData({ username, email, profile });
-    fetchChats()
-  }, [isSignedIn, router, username, email, profile]);
-
-  const handleMessage = async(user:Chats)=>{
-    setSelected(selected === user.id ? null : user.id)
-    const res = await fetch("/api/conversation",{
-      method:"POST",
-      body:JSON.stringify({
-        type :isGroup,
-        
-      })
-    })
-  }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isSignedIn, UserName, email, profileUrl]);
 
   return (
-    <div className="flex h-screen bg-gray-100">
-      {/* Sidebar - Chat List */}
-      <aside className="w-[26%] bg-[#1e1e1e] text-white flex flex-col">
-        {/* Top bar */}
-        <div className="flex items-center justify-between px-4 py-3 border-b border-gray-700">
-          <h1 className="text-lg font-semibold">Chats</h1>
-          <MoreVertical className="h-5 w-5 text-gray-300" />
-        </div>
-
+    <div className="flex h-screen w-screen">
+      {/* Sidebar */}
+      <div className="w-1/4 border-r border-gray-300 p-4 flex flex-col">
         {/* Search bar */}
-        <div className="p-3">
-          <div className="flex items-center bg-[#2a2a2a] rounded-full px-3 py-2">
-            <Search className="h-4 w-4 text-gray-400" />
-            <input
-              type="text"
-              placeholder="Search or start a new chat"
-              className="bg-transparent ml-2 text-sm w-full text-white placeholder:text-gray-400 focus:outline-none"
-            />
-          </div>
-        </div>
+        <input
+          type="text"
+          placeholder="Search by email or username"
+          className="w-full p-2 border border-gray-300 rounded mb-4"
+        />
 
-        {/* Chat list */}
-        <div className="overflow-y-auto flex-1 no-scrollbar">
-          {Chats.map((user) => (
-            <div
-              key={user.id}
-              className="flex items-center px-4 py-3 hover:bg-[#333] cursor-pointer"
-              onClick={() => handleMessage(user)}
-            >
-              <Image src={user.profile}alt={`${user.username}`} width={40} height={40} className="w-10 h-10 rounded-full bg-gray-500 flex items-center justify-center text-white font-semibold" />
-    
-              <div className="ml-3">
-                <p className="font-medium text-white">{user.username}</p>
-                <p className="text-xs text-gray-400 truncate">
-                  last message preview...
-                </p>
+        {/* Group create button */}
+        <button className="w-full bg-blue-500 text-white py-2 rounded mb-4">
+          + Create Group
+        </button>
+
+        {/* List of chats */}
+        <div className="flex-1 overflow-y-auto space-y-2">
+          {conversation.map((item) => (
+            <div key={item.id}>
+              <div className="p-3 rounded hover:bg-gray-100 border border-gray-200 cursor-pointer">
+                <div className="font-medium">
+                  <button onClick={() => handleConversationClick(item.id)}>
+                    {item.user1_id === user?.id ? item.user2_id : item.user1_id}
+                  </button>
+                </div>
+                <div className="text-sm text-gray-500">Click to open cha</div>
               </div>
             </div>
           ))}
         </div>
-      </aside>
+      </div>
 
-      {/* Main Chat Area */}
-      {selected ? (
-        <main className="flex-1 flex flex-col bg-[#101010] relative">
-          {/* Chat header */}
-          <div className="flex items-center justify-between px-4 py-3 border-b border-gray-800">
-            <div>
-              <p className="text-white font-semibold">Geek Room Team</p>
-              <p className="text-sm text-gray-400">select for group info</p>
-            </div>
-            <div className="flex items-center space-x-4 text-gray-300">
-              <Video className="w-5 h-5 cursor-pointer" />
-              <Phone className="w-5 h-5 cursor-pointer" />
-              <MoreVertical className="w-5 h-5 cursor-pointer" />
-            </div>
-          </div>
+      {/* Chat Area */}
+      <div className="w-3/4 flex flex-col p-4">
+        {/* Chat header */}
+        {/* <div className="border-b border-gray-300 pb-2 mb-4">
+          <div className="text-lg font-semibold">Ishaan Sharma</div>
+          <div className="text-sm text-gray-500">Online • Typing...</div>
+        </div> */}
 
-          {/* Chat body */}
-          <div className="flex-1 overflow-y-auto p-6 bg-[url('/whatsapp-pattern.png')] bg-cover">
-            {/* Message bubbles */}
-            <div className="flex flex-col space-y-3">
-              <div className="self-end max-w-[60%] bg-green-600 text-white rounded-xl px-4 py-2">
-                <p>Yeh raaz bhi mere hi saath chla jayega</p>
+        {/* Chat messages */}
+        <div className="flex-1 overflow-y-auto space-y-4 mb-4">
+          {/* Received message */}
+          {messages.map((item) => (
+            <div
+              className={`flex ${
+                item.sender_id === user?.id ? "justify-end" : "justify-start"
+              }`}
+              key={item.id}
+            >
+              <div
+                className={`max-w-sm p-3 rounded-lg ${
+                  item.sender_id === user?.id
+                    ? "bg-blue-500 text-white"
+                    : "bg-gray-200 text-black"
+                }`}
+              >
+                {item.text}
               </div>
-              <div className="self-start max-w-[60%] bg-[#2d2d2d] text-white rounded-xl px-4 py-2">
-                <p>wrna mujhe admin banade main chod deta hoon</p>
-              </div>
             </div>
-          </div>
+          ))}
+        </div>
 
-          {/* Message input */}
-          <div className="flex items-center px-4 py-2 bg-[#1a1a1a] border-t border-gray-700">
-            <input
-              type="text"
-              placeholder="Type a message"
-              className="flex-1 bg-transparent text-white placeholder:text-gray-400 focus:outline-none"
-            />
-            <Mic className="w-5 h-5 text-gray-400 ml-4 cursor-pointer" />
-          </div>
-        </main>
-      ) : (
-        <main className="flex-1 flex flex-col bg-[#101010] relative"></main>
-      )}
+        {/* Input */}
+        <div className="flex gap-2">
+          <input
+            type="text"
+            placeholder="Type a message"
+            className="flex-1 p-2 border border-gray-300 rounded"
+            onChange={handleInputChange}
+            value={inputText}
+          />
+          <button
+            className="bg-blue-500 text-white px-4 rounded"
+            onClick={fetchMessagesInput}
+          >
+            Send
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
