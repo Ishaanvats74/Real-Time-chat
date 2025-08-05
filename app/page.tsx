@@ -46,6 +46,19 @@ export default function Home() {
     console.log(data);
   };
 
+  
+  const fetchConversationsUpdate = async () => {
+    const res = await fetch("/app/api/conversations",{
+      method:"POST",
+      body:JSON.stringify({
+        user1_id:UserName,
+        user2_id:"user345",
+      })
+      
+    })
+    const data = await res.json()
+    setConversation(data)
+  }
   const fetchConversations = async () => {
     const res = await fetch("/api/conversations", {
       method: "GET",
@@ -54,19 +67,6 @@ export default function Home() {
     console.log(data);
     setConversation(data);
   };
-
-  // const fetchConversationsUpdate = async () => {
-  //   const res = await fetch("/app/api/conversations",{
-  //     method:"POST",
-  //     body:JSON.stringify({
-  //       user1_id:"user123",
-  //       user2_id:"user345",
-  //     })
-
-  //   })
-  //   const data = await res.json()
-  //   setConversation(data)
-  // }
 
   const fetchMessages = async (conversationId: unknown) => {
     const res = await fetch(`/api/messages?conversation_id=${conversationId}`, {
@@ -105,6 +105,7 @@ export default function Home() {
     } else {
       fetchUser();
       fetchConversations();
+      fetchConversationsUpdate()
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isSignedIn, UserName, email, profileUrl]);
