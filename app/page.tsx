@@ -4,6 +4,13 @@ import { useUser } from "@clerk/nextjs";
 import { redirect } from "next/navigation";
 import React, { useEffect, useState } from "react";
 
+type users = {
+  id:string;
+  username:string;
+  email:string;
+  profile:string;
+  created_at:string;
+}
 
 type messages = {
   id: string;
@@ -24,10 +31,12 @@ export default function Home() {
   const { isSignedIn, user } = useUser();
   const [conversation, setConversation] = useState<conversation[]>([]);
   const [inputText, setInputText] = useState("");
+  const [inputSearch,setInputSearch] = useState("");
   const [messages, setMessages] = useState<messages[]>([]);
   const [selectedConversationId, setSelectedConversationId] = useState<
     string | null
   >(null);
+  const [searchResult,setSearchResult] = useState<users[]>([])
 
   const UserName = user?.username;
   const email = user?.emailAddresses[0].emailAddress;
@@ -65,7 +74,7 @@ export default function Home() {
     });
     const data = await res.json();
     console.log(data);
-    setConversation(data);
+    setConversation(data.result);
   };
 
   const fetchMessages = async (conversationId: unknown) => {
@@ -74,7 +83,7 @@ export default function Home() {
     });
     const data = await res.json();
     console.log(data);
-    setMessages(data);
+    setMessages(data.result);
   };
 
   const fetchMessagesInput = async () => {
@@ -99,6 +108,21 @@ export default function Home() {
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setInputText(e.target.value);
   };
+
+  const handleSearch = async(e:React.ChangeEvent<HTMLInputElement>)=>{
+    const value = e.target.value;
+  setInputSearch(value);
+    if (value === "") {
+      setSearchResult([])
+      return;
+    }
+    const res = await fetch(`/api/users?query=${inputSearch}`,{
+      method:"GET"
+    })
+    const data = await res.json()
+    console.log(data)
+    setSearchResult(data.result)
+  }
   useEffect(() => {
     if (!isSignedIn) {
       redirect("/sign-in");
@@ -119,8 +143,14 @@ export default function Home() {
           type="text"
           placeholder="Search by email or username"
           className="w-full p-2 border border-gray-300 rounded mb-4"
+          value={inputSearch}
+          onChange={handleSearch}
         />
-
+        {searchResult.map((item)=>(
+          <button key={item.id} onClick={fetchMessages}>
+            {item.username}
+          </button>
+        ))}
         {/* Group create button */}
         <button className="w-full bg-blue-500 text-white py-2 rounded mb-4">
           + Create Group

@@ -5,5 +5,5 @@ const sql = neon(process.env.DATABASE_URL!);
 
 export async function GET() {
     const res = await sql`SELECT * FROM conversations`
-    return NextResponse.json({res},{status:200})
+    return NextResponse.json({result:res},{status:200})
 }
