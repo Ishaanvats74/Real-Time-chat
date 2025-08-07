@@ -13,7 +13,7 @@ export async function GET(req:Request) {
 export async function POST(req:Request) {
     const body = await req.json()
     const {conversation_id,sender_id,text} = body 
-    const res = await sql`INSERT INTO messages (conversation_id,sender_id,text) VALUES (${conversation_id},${sender_id},${text})`
+    const res = await sql`INSERT INTO messages (conversation_id,sender_id,text) VALUES (${conversation_id},${sender_id},${text}) RETURNING *`
 
     return NextResponse.json({result:res}, {status:200})
 }
