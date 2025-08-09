@@ -1,7 +1,7 @@
 'use client';
 
 import { useUser } from '@clerk/nextjs';
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 
 type messages = {
   id: string;
@@ -10,20 +10,37 @@ type messages = {
   text: string;
   createdAt: string;
 };
+
 const Page = () => {
     const [messages,setMessages] = useState<messages[]>([])
+    const [inputText,setInputText] = useState<string>("")
     const {user} = useUser()
 
+    const handleinput = async(e:React.ChangeEvent<HTMLInputElement>)=>{
+      setInputText(e.target.value)
+    };
+
+    const fetchMessagesInput = async () => {
+      
+    };
+
     const fetchMessages = async () => {
-        const res = await fetch(`/api/messages`,{method:"GET"})
-    }
+        const res = await fetch(`/api/messages`,{method:"GET"});
+        const data = await res.json();
+        setMessages(data.result);
+    };
+
+    useEffect(()=>{
+      fetchMessages()
+    },[]);
   return (
     <div className="w-3/4 flex flex-col p-4">
         {/* Chat header */}
-        {/* <div className="border-b border-gray-300 pb-2 mb-4">
+        {}
+        <div className="border-b border-gray-300 pb-2 mb-4">
           <div className="text-lg font-semibold">Ishaan Sharma</div>
           <div className="text-sm text-gray-500">Online • Typing...</div>
-        </div> */}
+        </div>
 
         {/* Chat messages */}
         <div className="flex-1 overflow-y-auto space-y-4 mb-4">
@@ -54,7 +71,7 @@ const Page = () => {
             type="text"
             placeholder="Type a message"
             className="flex-1 p-2 border border-gray-300 rounded"
-            onChange={handleInputChange}
+            onChange={handleinput}
             value={inputText}
           />
           <button
