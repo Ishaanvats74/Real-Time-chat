@@ -2,7 +2,7 @@
 
 import { useUser } from "@clerk/nextjs";
 import { useParams } from "next/navigation";
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 
 type messages = {
   id: string;
@@ -49,47 +49,50 @@ const Page = () => {
     fetchMessages();
   };
 
-  const fetchConversation = async () => {
+  const fetchConversation = useCallback(async () => {
     const res = await fetch(`/api/conversations?user=${email}`, {
       method: "GET",
     });
     const data = await res.json();
     console.log(data.result);
     setConversation(data.result);
-  };
-  const fetchMessages = async () => {
+  }, [email]);
+  const fetchMessages = useCallback(async () => {
     const res = await fetch(`/api/messages?conversation_id=${messageId}`, {
       method: "GET",
     });
     const data = await res.json();
     setMessages(data.result);
-  };
+  }, [messageId]);
   useEffect(() => {
     fetchConversation();
     fetchMessages();
-  });
+  }, [fetchConversation,fetchMessages]);
+ 
   return (
     <div className="h-full w-full flex flex-col p-4">
       {/* Chat header */}
 
-      {conversation.filter((item) => item.id == messageId).map((item) => (
-        <div
-          className="border-b border-gray-300 pb-3 mb-4 flex items-center justify-between"
-          key={item.id}
-        >
-          <div>
-            <div className="text-lg font-semibold">
-              {item.user2_email == user?.emailAddresses[0].emailAddress
-                ? item.username1
-                : item.username2}
+      {conversation
+        .filter((item) => item.id == messageId)
+        .map((item) => (
+          <div
+            className="border-b border-gray-300 pb-3 mb-4 flex items-center justify-between"
+            key={item.id}
+          >
+            <div>
+              <div className="text-lg font-semibold">
+                {item.user2_email == user?.emailAddresses[0].emailAddress
+                  ? item.username1
+                  : item.username2}
+              </div>
+              <div className="text-sm text-gray-500">
+                Tap for More Information...
+              </div>
             </div>
-            <div className="text-sm text-gray-500">
-              Tap for More Information...
-            </div>
+            <button className="text-gray-500 hover:text-gray-700">⋮</button>
           </div>
-          <button className="text-gray-500 hover:text-gray-700">⋮</button>
-        </div>
-      ))}
+        ))}
 
       <div className="flex-1 overflow-y-auto space-y-3 px-2 mb-4">
         {messages.map((item) => {

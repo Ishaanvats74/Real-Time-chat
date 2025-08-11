@@ -1,6 +1,6 @@
 "use client";
 
-import { useUser } from "@clerk/nextjs";
+import { SignedIn, UserButton, useUser } from "@clerk/nextjs";
 import { redirect, useRouter } from "next/navigation";
 import React, { useEffect, useState } from "react";
 
@@ -26,7 +26,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   const [conversation, setConversation] = useState<conversation[]>([]);
   const [inputSearch, setInputSearch] = useState("");
   const [searchResult, setSearchResult] = useState<users[]>([]);
-  const [seleted, setSelected] = useState<boolean>(false);
+  const [selected, setSelected] = useState<string | null>(null);
   const router = useRouter();
 
   const UserName = user?.username;
@@ -82,7 +82,16 @@ export default function Layout({ children }: { children: React.ReactNode }) {
     });
     const data = await res.json();
     console.log(data.result);
-    router.push(`/messages/${item.id}}`);
+    const convo = data.result[0];
+    setSelected(convo.id);
+    if (selected == convo.id) {
+      setSelected(null);
+    } else {
+      setSelected(convo.id);
+      router.push(`/messages/${convo.id}`);
+      setSearchResult([])
+    }
+    setConversation(data.result);
   };
 
   useEffect(() => {
@@ -92,23 +101,32 @@ export default function Layout({ children }: { children: React.ReactNode }) {
       fetchUser();
       fetchConversation();
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isSignedIn, UserName, email, profileUrl]);
+  }, [isSignedIn]);
 
   return (
     <div className="flex h-screen w-screen">
       {/* Sidebar */}
       <div className="w-1/4 border-r border-gray-300 p-4 flex flex-col">
         {/* Search bar */}
-        <input
-          type="text"
-          placeholder="Search by email or username"
-          className="w-full p-2 border border-gray-300 rounded mb-4"
-          value={inputSearch}
-          onChange={handleSearch}
-        />
+        <div className="flex items-center gap-2  py-4 border-b border-gray-200">
+          <input
+            type="text"
+            placeholder="Search by email or username"
+            className="flex-1 p-2 border border-gray-300 rounded"
+            value={inputSearch}
+            onChange={handleSearch}
+          />
+          <SignedIn>
+            <UserButton afterSignOutUrl="/sign-in" />
+          </SignedIn>
+        </div>
         {searchResult.map((item) => (
-          <button onClick={() => handleSearchResult(item)} key={item.id}>
+          <button
+            onClick={() => {
+              handleSearchResult(item);
+            }}
+            key={item.id}
+          >
             <div className="flex justify-between items-center">
               <div>{item.username}</div>
               <div className="">{item.email}</div>
@@ -125,10 +143,14 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           {conversation.map((item) => (
             <button
               key={item.id}
-              onClick={() => (
-                router.push(`/messages/${item.id}`),
-                setSelected((prev) => !prev)
-              )}
+              onClick={() => {
+                if (selected == item.id) {
+                  setSelected(null);
+                } else {
+                  setSelected(item.id);
+                  router.push(`/messages/${item.id}`);
+                }
+              }}
               className="w-full text-left"
             >
               <div className="p-3 rounded hover:bg-gray-100 border border-gray-200 cursor-pointer">
@@ -150,7 +172,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
       </div>
 
       {/* Chat Area */}
-      {seleted && <div className="w-3/4">{children}</div>}
+      {selected && <div className="w-3/4">{children}</div>}
     </div>
   );
 }

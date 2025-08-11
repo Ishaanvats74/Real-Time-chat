@@ -20,7 +20,7 @@ export async function POST(req: Request) {
       await sql`SELECT * FROM conversations WHERE (user1_email = ${sender} AND user2_email = ${receiver} ) OR (user1_email = ${receiver} AND user2_email = ${sender} )`;
 
     if (existing.length > 0) {
-      return NextResponse.json({ conversation: existing }, { status: 200 });
+      return NextResponse.json({ result: existing }, { status: 200 });
     }
 
     const res =
