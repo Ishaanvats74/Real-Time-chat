@@ -5,9 +5,13 @@ const sql = neon(process.env.DATABASE_URL!);
 
 export async function POST(req: Request) {
   const body = await req.json();
-    const timeStamp = new Date().toLocaleString()
+  const timeStamp = new Date().toLocaleString()
   const { username, email, profile } = body;
-  const res = await sql`INSERT INTO users (username,email,profile,created_at) VALUES (${username}, ${email}, ${profile},${timeStamp})`;
+  const existingUser = await sql`SELECT * FROM users WHERE email = ${email}`;
+if (existingUser.length > 0) {
+    return NextResponse.json({ result: existingUser }, { status: 200 });
+  }
+  const res = await sql`INSERT INTO users (username,email,profile,created_at) VALUES (${username}, ${email}, ${profile},${timeStamp})RETURNING *`;
 
   return NextResponse.json({result: res }, { status: 200 });
 }
