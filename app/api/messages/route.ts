@@ -6,15 +6,12 @@ export async function GET(req:Request) {
     const { searchParams } = new URL(req.url)
     const conversation_id = searchParams.get("conversation_id")
     const res = await sql`SELECT * FROM messages WHERE (conversation_id = ${conversation_id}) ORDER BY created_at ASC`
-
-    return NextResponse.json({result:res}, {status:200})
+    return NextResponse.json({result:res}, {status:200});
 }
 
 export async function POST(req:Request) {
     const body = await req.json()
-    const {conversation_id,sender_id,text} = body 
-    const res = await sql`INSERT INTO messages (conversation_id,sender_id,text) VALUES (${conversation_id},${sender_id},${text}) RETURNING *`
-
-    return NextResponse.json({result:res}, {status:200})
+    const {conversationId,content,senderId,receiverId} = body 
+    const res = await sql`INSERT INTO messages (conversation_id,content,sender_id,receiver_id) VALUES (${conversationId},${content},${senderId},${receiverId})`;
+    return NextResponse.json({result:res}, {status:200});
 }
-

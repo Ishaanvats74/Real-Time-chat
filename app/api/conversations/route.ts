@@ -8,26 +8,25 @@ export async function GET(req: Request) {
   const userId = searchParams.get("user");
   if (!userId) return NextResponse.json({ result: [] });
   const res = await sql` SELECT * FROM conversations
-    WHERE user1_id = ${userId} OR user2_id = ${userId}`;
+    WHERE user1_email = ${userId} OR user2_email = ${userId}`;
   return NextResponse.json({ result: res }, { status: 200 });
 }
 
 export async function POST(req: Request) {
   const body = await req.json();
   try {
-    
-      const { sender, receiver } = body;
-      const existing =
-      await sql`SELECT * FROM conversations WHERE (user1_id = ${sender} AND user2_id = ${receiver}) OR (user1_id = ${receiver} AND user2_id = ${sender})`;
-      
-      if (existing.length > 0) {
-          return NextResponse.json({ conversation_id: existing }, { status: 200 });
-        }
-        
-        const res =
-        await sql`INSERT INTO conversations (user1_id,user2_id) VALUES (${sender},${receiver}) RETURNING *`;
-        return NextResponse.json({ result: res }, { status: 200 });
-    } catch (error) {
-      return NextResponse.json({error},{status:500})
+    const { sender, receiver,username1,username2} = body;
+    const existing =
+      await sql`SELECT * FROM conversations WHERE (user1_email = ${sender} AND user2_email = ${receiver} ) OR (user1_email = ${receiver} AND user2_email = ${sender} )`;
+
+    if (existing.length > 0) {
+      return NextResponse.json({ conversation: existing }, { status: 200 });
     }
+
+    const res =
+      await sql`INSERT INTO conversations (user1_email,user2_email,username1,username2) VALUES (${sender},${receiver},${username1},${username2}) RETURNING *`;
+    return NextResponse.json({ result: res }, { status: 200 });
+  } catch (error) {
+    return NextResponse.json({ error }, { status: 500 });
+  }
 }

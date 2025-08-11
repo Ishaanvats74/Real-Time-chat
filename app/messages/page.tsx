@@ -3,7 +3,7 @@ import React from 'react'
 
 const page = () => {
   return (
-    <div>
+    <div className="w-full flex flex-col p-4">
       
     </div>
   )
