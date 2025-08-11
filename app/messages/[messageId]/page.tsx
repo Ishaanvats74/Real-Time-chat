@@ -2,7 +2,7 @@
 
 import { useUser } from "@clerk/nextjs";
 import { useParams } from "next/navigation";
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 
 type messages = {
   id: string;
@@ -29,6 +29,8 @@ const Page = () => {
   const email = user?.emailAddresses[0].emailAddress;
   const { messageId } = useParams<{ messageId: string }>();
   console.log(messageId);
+  const messagesEndRef = useRef<HTMLDivElement | null>(null);
+  const containerRef = useRef<HTMLDivElement | null>(null);
 
   const handleinput = async (e: React.ChangeEvent<HTMLInputElement>) => {
     setInputText(e.target.value);
@@ -65,8 +67,14 @@ const Page = () => {
     setMessages(data.result);
   }, [messageId]);
   useEffect(() => {
+   if (containerRef.current) {
+    containerRef.current.scrollTop = containerRef.current.scrollHeight;
+  }
+}, [messages]);
+  useEffect(() => {
     fetchConversation();
     fetchMessages();
+    
   }, [fetchConversation,fetchMessages]);
  
   return (
@@ -94,7 +102,7 @@ const Page = () => {
           </div>
         ))}
 
-      <div className="flex-1 overflow-y-auto space-y-3 px-2 mb-4">
+      <div className="flex-1 overflow-y-auto space-y-3 px-2 mb-4 " ref={containerRef}>
         {messages.map((item) => {
           const isSender = item.sender_id === user?.username;
           return (
@@ -114,6 +122,7 @@ const Page = () => {
             </div>
           );
         })}
+        <div ref={messagesEndRef} />
       </div>
 
       <div className="p-4 bg-white border-t border-gray-300 flex gap-2 items-center">
