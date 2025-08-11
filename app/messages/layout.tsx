@@ -134,7 +134,11 @@ export default function Layout({ children }: { children: React.ReactNode }) {
               <div className="p-3 rounded hover:bg-gray-100 border border-gray-200 cursor-pointer">
                 <div className="font-medium"></div>
                 <div>
-                  <div>{item.username1}</div>
+                  <div>
+                    {item.user1_email == user?.emailAddresses[0].emailAddress
+                      ? item.username2
+                      : item.username1}
+                  </div>
                   <div className="text-sm text-gray-500">
                     Click to open chat
                   </div>

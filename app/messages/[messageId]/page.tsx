@@ -65,14 +65,14 @@ const Page = () => {
     setMessages(data.result);
   };
   useEffect(() => {
-    fetchMessages();
     fetchConversation();
-  }, []);
+    fetchMessages();
+  });
   return (
     <div className="h-full w-full flex flex-col p-4">
       {/* Chat header */}
 
-      {conversation.map((item) => (
+      {conversation.filter((item) => item.id == messageId).map((item) => (
         <div
           className="border-b border-gray-300 pb-3 mb-4 flex items-center justify-between"
           key={item.id}
