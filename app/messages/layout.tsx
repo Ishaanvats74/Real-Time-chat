@@ -83,15 +83,10 @@ export default function Layout({ children }: { children: React.ReactNode }) {
     const data = await res.json();
     console.log(data.result);
     const convo = data.result[0];
+    setConversation(data.result);
     setSelected(convo.id);
-    if (selected == convo.id) {
-      setSelected(null);
-    } else {
-      setSelected(convo.id);
       router.push(`/messages/${convo.id}`);
       setSearchResult([])
-    }
-    setConversation(data.result);
   };
 
   useEffect(() => {
@@ -171,7 +166,6 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         </div>
       </div>
 
-      {/* Chat Area */}
       {selected && <div className="w-3/4">{children}</div>}
     </div>
   );
