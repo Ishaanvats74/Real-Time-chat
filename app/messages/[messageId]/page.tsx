@@ -3,7 +3,8 @@
 import { useUser } from "@clerk/nextjs";
 import { useParams } from "next/navigation";
 import React, { useCallback, useEffect, useRef, useState } from "react";
-
+import { io } from "socket.io-client";
+const socket = io("http://localhost:3001");
 type messages = {
   id: string;
   conversation_id: string;
@@ -31,6 +32,7 @@ const Page = () => {
   console.log(messageId);
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
+  const socket = server("http://localhost:3001");
 
   const handleinput = async (e: React.ChangeEvent<HTMLInputElement>) => {
     setInputText(e.target.value);
