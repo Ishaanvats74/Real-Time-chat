@@ -1,37 +1,75 @@
 import { Server } from "socket.io";
+import 'dotenv/config';
 import http from "http";
+import { neon } from "@neondatabase/serverless";
 
+const sql = neon(process.env.DATABASE_URL);
 const httpServer = http.createServer();
 
-const io = new Server(httpServer,{
-    cors: { origin: "*" }
-})
+const io = new Server(httpServer, {
+     cors: {
+    origin: "http://localhost:3000", // your frontend URL
+    methods: ["GET", "POST"],
+  },
+});
 
-
-io.on("connection",(socket)=>{
+io.on("connection", (socket) => {
     console.log("User Connected:", socket.id);
 
-    socket.on("joinConversation",async(conversationId)=>{
-      socket.join(conversationId)
-      console.log(`📌 User ${socket.id} joined conversation ${conversationId}`);
-    })
+    socket.on("joinConversation", async (conversationId) => {
+        try {
+            socket.join(conversationId.toString());
+            console.log(`📌 User ${socket.id} joined conversation ${conversationId}`);
+        } catch (error) {
+            console.error("Error joining conversation:", error);
+        }
+    });
 
-    socket.on("sendMessage",async(msg)=>{
-        const {conversationId,content,senderId,receiverId} = msg 
-        io.to(conversationId).emit("newMessage",msg);
-         await sql`
-      INSERT INTO messages (conversation_id, sender_id, receiver_id, content)
-      VALUES (${conversationId}, ${senderId}, ${receiverId}, ${content})
-    `;
-    })
+    socket.on("sendMessage", async (msg) => {
+        try {
+            const { conversation_id, content, sender_id, receiver_id } = msg;
+            
+            console.log("Received message to send:", msg);
+            
+            const result = await sql`
+                INSERT INTO messages (conversation_id, sender_id, receiver_id, content)
+                VALUES (${conversation_id}, ${sender_id}, ${receiver_id}, ${content})
+                RETURNING id, conversation_id, sender_id, receiver_id, content, created_at
+            `;
+            console.log("Message inserted into database:", result);
+            // Get the inserted message with its ID and timestamp
+            const insertedMessage = result[0];
+            
+            // Broadcast the message with the database-generated data
+            const messageToSend = {
+                id: insertedMessage.id,
+                conversation_id: insertedMessage.conversation_id,
+                sender_id: insertedMessage.sender_id,
+                receiver_id: insertedMessage.receiver_id,
+                content: insertedMessage.content,
+                createdAt: insertedMessage.created_at // Note: using createdAt to match frontend
+            };
 
-    socket.on("disconnect",()=>{
+            console.log("Broadcasting message to room:", conversation_id);
+            console.log("Message data:", messageToSend);
+            
+            // Emit to all users in the conversation room
+            io.to(conversation_id.toString()).emit("newMessage", messageToSend);
+            
+        } catch (error) {
+            console.error("Error sending message:", error);
+            console.error("Error details:", error.message);
+            socket.emit("messageError", { error: "Failed to send message" });
+        }
+    });
+
+    socket.on("disconnect", () => {
         console.log("User Disconnected:", socket.id);
-    })
-})
+    });
+});
 
-const PORT = process.env.PORT || 3001;
+const PORT =  3001;
 
-httpServer.listen(PORT,()=>{
-    console.log(`Server is running on port ${PORT}`);
-})
+httpServer.listen(PORT, () => {
+    console.log(`Socket.IO server is running on port ${PORT}`);
+});

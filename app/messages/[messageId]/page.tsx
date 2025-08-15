@@ -2,16 +2,17 @@
 
 import { useUser } from "@clerk/nextjs";
 import { useParams } from "next/navigation";
-import React, { useCallback, useEffect, useRef, useState } from "react";
-import { io } from "socket.io-client";
-const socket = io("http://localhost:3001");
+import React, { useEffect, useRef, useState } from "react";
+import { io, Socket } from "socket.io-client";
+
+
 type messages = {
-  id: string;
+  id?: string;
   conversation_id: string;
   sender_id: string;
   receiver_id: string;
   content: string;
-  createdAt: string;
+  createdAt?: string;
 };
 type conversation = {
   id: string;
@@ -23,6 +24,8 @@ type conversation = {
 };
 
 const Page = () => {
+  const [loading, setLoading] = useState<boolean>(true);
+  const [socket, setSocket] = useState<Socket | null>(null);
   const [messages, setMessages] = useState<messages[]>([]);
   const [conversation, setConversation] = useState<conversation[]>([]);
   const [inputText, setInputText] = useState<string>("");
@@ -32,53 +35,97 @@ const Page = () => {
   console.log(messageId);
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
-  const socket = server("http://localhost:3001");
+
+  useEffect(() => {
+    const s = io("http://localhost:3001");
+    setSocket(s);
+    return () => {
+      s.disconnect();
+    };
+  }, []);
 
   const handleinput = async (e: React.ChangeEvent<HTMLInputElement>) => {
     setInputText(e.target.value);
   };
 
-  const fetchMessagesInput = async () => {
-    const res = await fetch("/api/messages", {
-      method: "POST",
-      body: JSON.stringify({
-        content: inputText,
-        conversationId: messageId,
-        senderId: user?.username,
-      }),
-    });
-    const data = await res.json();
-    console.log(data.result);
-    setInputText("");
-    fetchMessages();
-  };
-
-  const fetchConversation = useCallback(async () => {
-    const res = await fetch(`/api/conversations?user=${email}`, {
-      method: "GET",
-    });
-    const data = await res.json();
-    console.log(data.result);
-    setConversation(data.result);
-  }, [email]);
-  const fetchMessages = useCallback(async () => {
-    const res = await fetch(`/api/messages?conversation_id=${messageId}`, {
-      method: "GET",
-    });
-    const data = await res.json();
-    setMessages(data.result);
-  }, [messageId]);
+  
   useEffect(() => {
-   if (containerRef.current) {
-    containerRef.current.scrollTop = containerRef.current.scrollHeight;
-  }
-}, [messages]);
-  useEffect(() => {
+    if (containerRef.current) {
+      containerRef.current.scrollTop = containerRef.current.scrollHeight;
+    }
+  }, [messages]);
+  
+  useEffect(()=>{
+    const fetchConversation = async () => {
+      try {
+        setLoading(true);
+        const res = await fetch(`/api/conversations?user=${email}`, {
+          method: "GET",
+        });
+        const data = await res.json();
+        console.log(data.result);
+        setConversation(data.result);
+        
+      } catch (error) {
+        console.error("Error fetching conversation:", error);
+      } finally{
+        setLoading(false);
+      }
+    };
     fetchConversation();
-    fetchMessages();
+  },[email]);
+  
+  useEffect(()=>{
+    if (!socket) return;
     
-  }, [fetchConversation,fetchMessages]);
- 
+    socket.emit("joinConversation", messageId);
+    
+    const fetchMessages = async () => {
+      try {
+        const res = await fetch(`/api/messages?conversation_id=${messageId}`, {
+          method: "GET",
+        });
+        const data = await res.json();
+        setMessages(data.result);
+        
+        
+      } catch (error) {
+        console.error("Error fetching messages:", error);
+        
+      }}
+      fetchMessages();
+      socket.on("newMessage", (msg: messages) => {
+        setMessages((prev) => [...prev, msg]);
+      });
+      
+      return () => {
+        socket.off("newMessage");
+      };
+      
+    },[messageId, socket]);
+    
+    
+    const fetchMessagesInput = async () => {
+      const convo = conversation.find((item) => item.id.toString() === messageId);
+      if (!inputText.trim() || !user || !socket || !convo) return;
+  
+      const newMsg: messages = {
+        conversation_id: messageId,
+        content: inputText,
+        sender_id: user.username!,
+        receiver_id:
+          convo?.user1_email == email ? convo.username2 : convo.username1,
+      };
+  
+      socket.emit("sendMessage", newMsg);
+      setInputText("");
+    };
+
+    
+  if (loading) {
+    return <div className="p-4">Loading conversation...</div>;
+  }
+
   return (
     <div className="h-full w-full flex flex-col p-4">
       {/* Chat header */}
@@ -104,7 +151,10 @@ const Page = () => {
           </div>
         ))}
 
-      <div className="flex-1 overflow-y-auto space-y-3 px-2 mb-4 " ref={containerRef}>
+      <div
+        className="flex-1 overflow-y-auto space-y-3 px-2 mb-4 "
+        ref={containerRef}
+      >
         {messages.map((item) => {
           const isSender = item.sender_id === user?.username;
           return (

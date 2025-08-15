@@ -18,7 +18,7 @@ type conversation = {
   user2_email: string;
   username1: string;
   username2: string;
-  createdAt: string;
+  created_at: string;
 };
 
 export default function Layout({ children }: { children: React.ReactNode }) {
@@ -33,18 +33,6 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   const email = user?.emailAddresses[0].emailAddress;
   const profileUrl = user?.imageUrl;
 
-  const fetchUser = async () => {
-    const res = await fetch("/api/users", {
-      method: "POST",
-      body: JSON.stringify({
-        username: UserName,
-        email: email,
-        profile: profileUrl,
-      }),
-    });
-    const data = await res.json();
-    console.log(data.result);
-  };
   const handleSearch = async (e: React.ChangeEvent<HTMLInputElement>) => {
     e.preventDefault();
     const value = e.target.value;
@@ -59,15 +47,6 @@ export default function Layout({ children }: { children: React.ReactNode }) {
       console.log(data.result);
       setSearchResult(data.result);
     }
-  };
-
-  const fetchConversation = async () => {
-    const res = await fetch(`/api/conversations?user=${email}`, {
-      method: "GET",
-    });
-    const data = await res.json();
-    console.log(data.result);
-    setConversation(data.result);
   };
 
   const handleSearchResult = async (item: users) => {
@@ -85,18 +64,39 @@ export default function Layout({ children }: { children: React.ReactNode }) {
     const convo = data.result[0];
     setConversation(data.result);
     setSelected(convo.id);
-      router.push(`/messages/${convo.id}`);
-      setSearchResult([])
+    router.push(`/messages/${convo.id}`);
+    setSearchResult([]);
   };
 
   useEffect(() => {
     if (!isSignedIn) {
       redirect("/sign-in");
     } else {
+      const fetchUser = async () => {
+        const res = await fetch("/api/users", {
+          method: "POST",
+          body: JSON.stringify({
+            username: UserName,
+            email: email,
+            profile: profileUrl,
+          }),
+        });
+        const data = await res.json();
+        console.log(data.result);
+      };
       fetchUser();
+      const fetchConversation = async () => {
+        const res = await fetch(`/api/conversations?user=${email}`, {
+          method: "GET",
+        });
+        const data = await res.json();
+        console.log(data.result);
+        setConversation(data.result);
+      };
+
       fetchConversation();
     }
-  }, [isSignedIn]);
+  }, [isSignedIn, email, UserName, profileUrl, user]);
 
   return (
     <div className="flex h-screen w-screen">
