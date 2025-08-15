@@ -37,6 +37,8 @@ io.on("connection", (socket) => {
                 RETURNING id, conversation_id, sender_id, receiver_id, content, created_at
             `;
             console.log("Message inserted into database:", result);
+
+            
             // Get the inserted message with its ID and timestamp
             const insertedMessage = result[0];
             
@@ -47,14 +49,20 @@ io.on("connection", (socket) => {
                 sender_id: insertedMessage.sender_id,
                 receiver_id: insertedMessage.receiver_id,
                 content: insertedMessage.content,
-                createdAt: insertedMessage.created_at // Note: using createdAt to match frontend
+                createdAt: insertedMessage.created_at
             };
+
+            
 
             console.log("Broadcasting message to room:", conversation_id);
             console.log("Message data:", messageToSend);
-            
-            // Emit to all users in the conversation room
+
             io.to(conversation_id.toString()).emit("newMessage", messageToSend);
+            
+            io.to(conversation_id.toString()).emit("conversationUpdated",{
+                conversation_id: insertedMessage.conversation_id,
+                new_message_time: insertedMessage.created_at,
+            })
             
         } catch (error) {
             console.error("Error sending message:", error);
@@ -62,6 +70,8 @@ io.on("connection", (socket) => {
             socket.emit("messageError", { error: "Failed to send message" });
         }
     });
+
+    
 
     socket.on("disconnect", () => {
         console.log("User Disconnected:", socket.id);

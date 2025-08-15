@@ -19,6 +19,7 @@ type conversation = {
   username1: string;
   username2: string;
   created_at: string;
+  new_message_time: string;
 };
 
 export default function Layout({ children }: { children: React.ReactNode }) {
@@ -135,7 +136,12 @@ export default function Layout({ children }: { children: React.ReactNode }) {
 
         {/* List of chats */}
         <div className="flex-1 overflow-y-auto space-y-2">
-          {conversation.map((item) => (
+          {conversation.sort((a, b) => {
+      // Get latest message time for each conversation
+      const lastA =  a.new_message_time;
+      const lastB = b.new_message_time;
+      return new Date(lastB).getTime() - new Date(lastA).getTime(); // newest first
+    }).map((item) => (
             <button
               key={item.id}
               onClick={() => {

@@ -5,14 +5,13 @@ import { useParams } from "next/navigation";
 import React, { useEffect, useRef, useState } from "react";
 import { io, Socket } from "socket.io-client";
 
-
 type messages = {
   id?: string;
   conversation_id: string;
   sender_id: string;
   receiver_id: string;
   content: string;
-  createdAt?: string;
+  createdAt: string;
 };
 type conversation = {
   id: string;
@@ -21,6 +20,7 @@ type conversation = {
   username1: string;
   username2: string;
   createdAt: string;
+  new_message_time: string;
 };
 
 const Page = () => {
@@ -48,14 +48,13 @@ const Page = () => {
     setInputText(e.target.value);
   };
 
-  
   useEffect(() => {
     if (containerRef.current) {
       containerRef.current.scrollTop = containerRef.current.scrollHeight;
     }
   }, [messages]);
-  
-  useEffect(()=>{
+
+  useEffect(() => {
     const fetchConversation = async () => {
       try {
         setLoading(true);
@@ -65,21 +64,20 @@ const Page = () => {
         const data = await res.json();
         console.log(data.result);
         setConversation(data.result);
-        
       } catch (error) {
         console.error("Error fetching conversation:", error);
-      } finally{
+      } finally {
         setLoading(false);
       }
     };
     fetchConversation();
-  },[email]);
-  
-  useEffect(()=>{
+  }, [email]);
+
+  useEffect(() => {
     if (!socket) return;
-    
+
     socket.emit("joinConversation", messageId);
-    
+
     const fetchMessages = async () => {
       try {
         const res = await fetch(`/api/messages?conversation_id=${messageId}`, {
@@ -87,41 +85,51 @@ const Page = () => {
         });
         const data = await res.json();
         setMessages(data.result);
-        
-        
       } catch (error) {
         console.error("Error fetching messages:", error);
-        
-      }}
-      fetchMessages();
-      socket.on("newMessage", (msg: messages) => {
-        setMessages((prev) => [...prev, msg]);
-      });
-      
-      return () => {
-        socket.off("newMessage");
-      };
-      
-    },[messageId, socket]);
-    
-    
-    const fetchMessagesInput = async () => {
-      const convo = conversation.find((item) => item.id.toString() === messageId);
-      if (!inputText.trim() || !user || !socket || !convo) return;
-  
-      const newMsg: messages = {
-        conversation_id: messageId,
-        content: inputText,
-        sender_id: user.username!,
-        receiver_id:
-          convo?.user1_email == email ? convo.username2 : convo.username1,
-      };
-  
-      socket.emit("sendMessage", newMsg);
-      setInputText("");
+      }
+    };
+    fetchMessages();
+
+    socket.on("newMessage", (msg: messages) => {
+      setMessages((prev) => [...prev, msg]);
+    });
+
+    socket.on("conversationUpdated", (msg: messages) => {
+      setConversation((prev) =>prev.map((item) =>item.id === msg.conversation_id ?
+        { ...item, new_message_time: msg.createdAt } : item).sort((a, b) => new Date(b.new_message_time).getTime() - new Date(a.new_message_time).getTime())
+    );
+  });
+
+    return () => {
+      socket.off("newMessage");
+    };
+  }, [messageId, socket]);
+
+  const fetchMessagesInput = async () => {
+    const convo = conversation.find((item) => item.id.toString() === messageId);
+    if (!inputText.trim() || !user || !socket || !convo) return;
+
+    const newMsg: messages = {
+      conversation_id: messageId,
+      content: inputText,
+      sender_id: user.username!,
+      receiver_id:
+        convo?.user1_email == email ? convo.username2 : convo.username1,
+      createdAt: new Date().toISOString(),
     };
 
-    
+    socket.emit("sendMessage", newMsg);
+    setInputText("");
+
+    const res = await fetch(`/api/conversations`, {
+      method: "PATCH",
+      body: JSON.stringify({conversationId: messageId})
+    });
+    const data = await res.json();
+    console.log(data);
+  };
+
   if (loading) {
     return <div className="p-4">Loading conversation...</div>;
   }
