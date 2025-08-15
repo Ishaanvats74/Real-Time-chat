@@ -8,7 +8,7 @@ const httpServer = http.createServer();
 
 const io = new Server(httpServer, {
      cors: {
-    origin: "http://localhost:3000", // your frontend URL
+    origin: "*", // Allow all origins for development; restrict in production
     methods: ["GET", "POST"],
   },
 });
