@@ -2,13 +2,13 @@ import { Server } from "socket.io";
 import 'dotenv/config';
 import http from "http";
 import { neon } from "@neondatabase/serverless";
-import { NextRequest } from "next/server";
+
 
 const sql = neon(process.env.DATABASE_URL!);
 const httpServer = http.createServer();
 
 
-export async function GET(req:NextRequest) {
+export async function GET() {
     
     const io = new Server(httpServer, {
         cors: {
