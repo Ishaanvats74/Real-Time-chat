@@ -37,7 +37,7 @@ const Page = () => {
   const containerRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
-    const s = io("http://localhost:3001");
+    const s = io("https://real-time-chat-zeta-ruddy.vercel.app/api/socket");
     setSocket(s);
     return () => {
       s.disconnect();
